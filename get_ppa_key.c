@@ -1,3 +1,13 @@
+/*
+** get_ppa_key.c for add-apt-repository in /home/cadichon/Epitech/Debian_PPA
+**
+** Made by Cadichon
+** Login   <leo.labruyere@epitech.eu>
+**
+** Started on  Tue Jun 13 16:55:05 2017 Cadichon
+** Last update Tue Jun 13 16:55:06 2017 Cadichon
+*/
+
 #define _GNU_SOURCE
 #include <stdio.h>
 #include <string.h>
