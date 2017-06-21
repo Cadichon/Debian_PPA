@@ -25,9 +25,14 @@ then
 			echo "deb http://ppa.launchpad.net/$ppa_name/ubuntu $2 main" >> /etc/apt/sources.list
 		fi
 		apt update >> /dev/null 2> /tmp/${NAME}_apt_add_key.txt
-		echo "Public key to add :"
-		cat /tmp/${NAME}_apt_add_key.txt | grep NO_PUBKEY | sed -E "s/^.*NO_PUBKEY (.+)$/\1/" | xargs -i echo "- " {}
-		cat /tmp/${NAME}_apt_add_key.txt | grep NO_PUBKEY | sed -E "s/^.*NO_PUBKEY (.+)$/\1/" | xargs -i apt-key adv --keyserver keyserver.ubuntu.com --recv-key {}
+		if grep NO_PUBKEY /tmp/${NAME}_apt_add_key.txt
+		then
+			echo "Public key to add :"
+			cat /tmp/${NAME}_apt_add_key.txt | grep NO_PUBKEY | sed -E "s/^.*NO_PUBKEY (.+)$/\1/" | xargs -i echo "- " {}
+			cat /tmp/${NAME}_apt_add_key.txt | grep NO_PUBKEY | sed -E "s/^.*NO_PUBKEY (.+)$/\1/" | xargs -i apt-key adv --keyserver keyserver.ubuntu.com --recv-key {}
+		else
+			echo "No public key to add"
+		fi
 		rm -rf /tmp/${NAME}_apt_add_key.txt
 	fi
 else
