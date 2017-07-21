@@ -1,21 +1,48 @@
 #!/bin/bash
 
+is_repo ()
+{
+	if [ $(cut -d ' ' -f 1 <<< "$1") = "deb" ]
+	then
+		return 0
+	else
+		return 1
+	fi
+}
+
+display_help ()
+{
+	echo "Utility to add PPA and repositories in your debian machine"
+        echo "$0 ppa:user/ppa-name [ubuntu version]"
+	echo "or"
+	echo "$0 deb repo-url branch section1 [other-section]"
+}
+
 if [ `whoami` != 'root' ]
 then
     echo "Launch it as root"
     exit 1
 fi
 
-if [ $# -eq 1 -a $# -eq 2 ]
+if [ $# -ge 1 ]
 NM=`uname -a && date`
 NAME=`echo $NM | md5sum | cut -f1 -d" "`
 then
+	if is_repo "$1"
+	then
+		count=1
+		while [ $count -le $# ]
+		do
+			echo -n "${!count} " >> /etc/apt/sources.list
+			(( count++ ))
+		done
+		exit 0
+	fi
 	ppa_name=`echo "$1" | cut -d":" -f2 -s`
 	if [ -z "$ppa_name" ]
 	then
 		echo "PPA name not found"
-		echo "Utility to add PPA repositories in your debian machine"
-		echo "$0 ppa:user/ppa-name [ubuntu version]"
+		display_help
 	else
 		echo "$ppa_name"
 		if [ $# -eq 1 ]
@@ -36,7 +63,5 @@ then
 		rm -rf /tmp/${NAME}_apt_add_key.txt
 	fi
 else
-	echo "Utility to add PPA repositories in your debian machine"
-	echo "$0 ppa:user/ppa-name [ubuntu version]"
+	display_help
 fi
-
