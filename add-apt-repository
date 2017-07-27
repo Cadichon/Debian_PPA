@@ -20,8 +20,8 @@ display_help ()
 
 if [ `whoami` != 'root' ]
 then
-    echo "Launch it as root"
-    exit 1
+	echo "Launch it as root"
+	exit 1
 fi
 
 if [ $# -ge 1 ]
