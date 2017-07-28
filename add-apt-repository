@@ -29,7 +29,9 @@ fi
 NM=`uname -a && date`
 NAME=`echo $NM | md5sum | cut -f1 -d" "`
 
-if [ `whereis -b dirmngr` = "dirmngr:" ]
+dirmngr_dir=`whereis -b dirmngr`
+
+if [ "dirmngr_dir" = "dirmngr:" ]
 then
 	echo "You need to install \"dirmngr\""
 	echo "enter \"apt install dirmngr\" with root user or in sudo mod"
