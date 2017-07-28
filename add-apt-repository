@@ -63,6 +63,7 @@ then
 	else
 		echo "Already Up-to-date"
 	fi
+	rm /tmp/${NAME}
 	exit 0
 fi
 
