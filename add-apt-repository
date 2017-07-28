@@ -29,6 +29,13 @@ fi
 NM=`uname -a && date`
 NAME=`echo $NM | md5sum | cut -f1 -d" "`
 
+if [ `whereis -b dirmngr` = "dirmngr:" ]
+then
+	echo "You need to install \"dirmngr\""
+	echo "enter \"apt install dirmngr\" with root user or in sudo mod"
+	exit 1
+fi
+
 if [ $# -ge 1 ] && [ $1 = "update" ]
 then
 	curl_dir=`whereis -b curl`
