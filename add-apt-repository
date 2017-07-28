@@ -16,6 +16,8 @@ display_help ()
         echo "$0 ppa:user/ppa-name [ubuntu version]"
 	echo "or"
 	echo "$0 deb repo-url branch section1 [other-section]"
+	echo
+	echo "$0 update to update the tool to the lastest version"
 }
 
 if [ `whoami` != 'root' ]
@@ -24,9 +26,47 @@ then
 	exit 1
 fi
 
-if [ $# -ge 1 ]
 NM=`uname -a && date`
 NAME=`echo $NM | md5sum | cut -f1 -d" "`
+
+if [ $# -ge 1 ] && [ $1 = "update" ]
+then
+	curl_dir=`whereis -b curl`
+	wget_dir=`whereis -b wget`
+	diff_dir=`whereis -b diff`
+
+	if [ "$diff_dir" = "diff:" ]
+	then
+		echo "You need diffutils to use updater"
+		exit 1
+	fi
+
+	if [ "$curl_dir" = "curl:" ]
+	then
+		if [ "$wget_dir" = "wget:" ]
+		then
+			echo "You need wget or curl to use updater"
+			exit 1
+		else
+			wget -q "https://raw.githubusercontent.com/Cadichon/Debian_PPA/master/add-apt-repository" -O /tmp/${NAME}
+		fi
+	else
+		curl -s "https://raw.githubusercontent.com/Cadichon/Debian_PPA/master/add-apt-repository" > /tmp/${NAME}
+	fi
+
+	if !(diff /usr/bin/add-apt-repository /tmp/${NAME} &> /dev/null)
+	then
+		echo "Updating..."
+		rm /usr/bin/add-apt-repository
+		cp /tmp/${NAME} /usr/bin/add-apt-repository
+		chmod +x /usr/bin/add-apt-repository
+	else
+		echo "Already Up-to-date"
+	fi
+	exit 0
+fi
+
+if [ $# -ge 1 ]
 then
 	if is_repo "$1"
 	then
