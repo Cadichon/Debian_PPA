@@ -1,117 +1,186 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-is_repo ()
+tmp_file=$( (uname -a && date) | md5sum | cut -f1 -d" ")
+
+usage ()
 {
-	if [ $(cut -d ' ' -f 1 <<< "$1") = "deb" ]
-	then
-		return 0
-	else
-		return 1
-	fi
+    echo "Usage: $0 (ppa | repo | update)"
+    echo "Automatically add a repo or a ppa in repo list"
+    echo
+    echo "ppa: had to be in form \"ppa:user/ppa-name\" [ubuntu version]"
+    echo "repo: had to be in form \"deb repo-url branch section1 [other-section]\""
 }
 
-display_help ()
+check_dep ()
 {
-	echo "Utility to add PPA and repositories in your debian machine"
-        echo "$0 ppa:user/ppa-name [ubuntu version]"
-	echo "or"
-	echo "$0 deb repo-url branch section1 [other-section]"
-	echo
-	echo "$0 update to update the tool to the lastest version"
+    if [ $# -eq 2 ]
+    then
+	dep=$1
+	package=$2
+    else
+	dep=$1
+	package=$1
+    fi
+
+    check=$(whereis -b $1)
+
+    if [[ !(-a $(cut -d ' ' -f 2 <<< $check)) ]]
+    then
+       echo "You need \"$dep\" to use this tool"
+       echo "Install it launching as root:"
+       echo "apt install $package"
+       return 1
+    fi
+    return 0
 }
 
-if [ `whoami` != 'root' ]
-then
-	echo "Launch it as root"
+update_funct ()
+{
+    if !(check_dep "diff" "diffutils")
+    then
 	exit 1
-fi
+    fi
 
-NM=`uname -a && date`
-NAME=`echo $NM | md5sum | cut -f1 -d" "`
-
-dirmngr_dir=`whereis -b dirmngr`
-
-if [ "dirmngr_dir" = "dirmngr:" ]
-then
-	echo "You need to install \"dirmngr\""
-	echo "enter \"apt install dirmngr\" with root user or in sudo mod"
+    if check_dep "curl" > /dev/null
+    then
+	curl -s "https://raw.githubusercontent.com/Cadichon/Debian_PPA/master/add-apt-repository" > "/tmp/$tmp_file"
+    elif check_dep "wget" > /dev/null
+    then
+	 wget -q "https://raw.githubusercontent.com/Cadichon/Debian_PPA/master/add-apt-repository" -O "/tmp/$tmp_file"
+    else
+	echo "You need either \"curl\" or \"wget\" to use this tool"
+	echo "Install one of them launching as root:"
+	echo "apt install <one-of-them>"
 	exit 1
-fi
+    fi
 
-if [ $# -ge 1 ] && [ $1 = "update" ]
+    if !(diff "/usr/bin/$0" "/tmp/$tmp_file" 1> /dev/null 2> /dev/null)
+    then
+	echo "Updating"
+	rm "/usr/bin/$0"
+	mv "/tmp/$tmp_file" "/usr/bin/$0"
+	chmod +x "/usr/bin/$0"
+    else
+	echo "Already Up-to-date"
+    fi
+}
+
+last_char ()
+{
+    str=$1
+    str_size=$((${#str}-1))
+    echo "${str:$i:1}"
+}
+
+test_repo ()
+{
+    tested_repo="${@: -1}"
+    url=$2
+    if [ $(last_char "$url") != "/" ]
+    then
+	url="$url/"
+    fi
+    dist="dists/"
+    distrib=$3
+    url="$url$dist$distrib"
+    if check_dep "curl"
+    then
+	if !(curl -s --head "$url" | head -n 1 | grep "HTTP/1.[01] [23].." > /dev/null)
+	then
+	    echo "WARNING $url is NOT a valid repository"
+	    return 1
+	else
+	    return 0
+	 fi
+    else
+	echo "WARNING curl is not installed on your system"
+	echo "can't check if this repo :"
+	echo $tested_repo
+	echo "is valid"
+	return 0
+    fi
+}
+
+add_deb_rep ()
+{
+    count=1
+    repo=""
+    while [ $count -le $# ]
+    do
+	repo="$repo ${!count}"
+	(( count++ ))
+    done
+    if test_repo $repo "$repo"
+    then
+	echo "$repo" >> /etc/apt/sources.list
+    else
+	exit 1
+    fi
+}
+
+add_ppa ()
+{
+    ppa_name=$(echo "$1" | cut -d":" -f2 -s)
+    if [ -z "$ppa_name" ]
+    then
+	echo "PPA name not found"
+    else
+	echo "$ppa_name"
+	if [ $# -eq 1 ]
+	then
+	    ppa_url="deb http://ppa.launchpad.net/$ppa_name/ubuntu xenial main"
+	else
+	    ppa_url="deb http://ppa.launchpad.net/$ppa_name/ubuntu $2 main"
+	fi
+	if test_repo $ppa_url "ppa_$url"
+	then
+	    echo "$ppa_url" >> /etc/apt/sources.list
+	else
+	    exit 1
+	fi
+	apt update > /dev/null 2> "/tmp/$tmp_file"
+	if grep -q NO_PUBKEY "/tmp/$tmp_file"
+	then
+	    echo "Public key to add :"
+	    cat "/tmp/$tmp_file" | grep NO_PUBKEY | sed -E "s/^.*NO_PUBKEY (.+)$/\1/" | xargs -i echo "- " {}
+	    cat "/tmp/$tmp_file" | grep NO_PUBKEY | sed -E "s/^.*NO_PUBKEY (.+)$/\1/" | xargs -i apt-key adv --keyserver keyserver.ubuntu.com --recv-key {}
+	else
+	    echo "No public key to add"
+	fi
+	rm -rf "/tmp/$tmp_file"
+    fi
+}
+
+if [ $(whoami) != 'root' ]
 then
-	curl_dir=`whereis -b curl`
-	wget_dir=`whereis -b wget`
-	diff_dir=`whereis -b diff`
-
-	if [ "$diff_dir" = "diff:" ]
-	then
-		echo "You need diffutils to use updater"
-		exit 1
-	fi
-
-	if [ "$curl_dir" = "curl:" ]
-	then
-		if [ "$wget_dir" = "wget:" ]
-		then
-			echo "You need wget or curl to use updater"
-			exit 1
-		else
-			wget -q "https://raw.githubusercontent.com/Cadichon/Debian_PPA/master/add-apt-repository" -O /tmp/${NAME}
-		fi
-	else
-		curl -s "https://raw.githubusercontent.com/Cadichon/Debian_PPA/master/add-apt-repository" > /tmp/${NAME}
-	fi
-
-	if !(diff /usr/bin/add-apt-repository /tmp/${NAME} &> /dev/null)
-	then
-		echo "Updating..."
-		rm /usr/bin/add-apt-repository
-		cp /tmp/${NAME} /usr/bin/add-apt-repository
-		chmod +x /usr/bin/add-apt-repository
-	else
-		echo "Already Up-to-date"
-	fi
-	rm /tmp/${NAME}
-	exit 0
+    echo 'Launch me as root'
+    exit 1
 fi
 
-if [ $# -ge 1 ]
+if !(check_dep "dirmngr")
 then
-	if is_repo "$1"
-	then
-		count=1
-		while [ $count -le $# ]
-		do
-			echo -n "${!count} " >> /etc/apt/sources.list
-			(( count++ ))
-		done
-		exit 0
-	fi
-	ppa_name=`echo "$1" | cut -d":" -f2 -s`
-	if [ -z "$ppa_name" ]
-	then
-		echo "PPA name not found"
-		display_help
-	else
-		echo "$ppa_name"
-		if [ $# -eq 1 ]
-		then
-			echo "deb http://ppa.launchpad.net/$ppa_name/ubuntu xenial main" >> /etc/apt/sources.list
-		else
-			echo "deb http://ppa.launchpad.net/$ppa_name/ubuntu $2 main" >> /etc/apt/sources.list
-		fi
-		apt update >> /dev/null 2> /tmp/${NAME}_apt_add_key.txt
-		if grep -q NO_PUBKEY /tmp/${NAME}_apt_add_key.txt
-		then
-			echo "Public key to add :"
-			cat /tmp/${NAME}_apt_add_key.txt | grep NO_PUBKEY | sed -E "s/^.*NO_PUBKEY (.+)$/\1/" | xargs -i echo "- " {}
-			cat /tmp/${NAME}_apt_add_key.txt | grep NO_PUBKEY | sed -E "s/^.*NO_PUBKEY (.+)$/\1/" | xargs -i apt-key adv --keyserver keyserver.ubuntu.com --recv-key {}
-		else
-			echo "No public key to add"
-		fi
-		rm -rf /tmp/${NAME}_apt_add_key.txt
-	fi
-else
-	display_help
+    exit 1
 fi
+
+if [ $# -eq 0 ]
+then
+    usage
+    exit 0
+fi
+
+case "$1" in
+    "-h")
+	usage
+	;;
+    "--help")
+	usage
+	;;
+    update)
+	update_funct
+	;;
+    deb*)
+	add_deb_rep $*
+	;;
+    *)
+	add_ppa $*
+esac
