@@ -54,7 +54,7 @@ update_funct ()
 	exit 1
     fi
 
-    if !(diff "/usr/bin/$0" "/tmp/$tmp_file" 1> /dev/null 2> /dev/null)
+    if !(diff "/usr/bin/$0" "/tmp/$tmp_file" > /dev/null)
     then
 	echo "Updating"
 	rm "/usr/bin/$0"
@@ -68,8 +68,7 @@ update_funct ()
 last_char ()
 {
     str=$1
-    str_size=$((${#str}-1))
-    echo "${str:$i:1}"
+    echo "${str: -1}"
 }
 
 test_repo ()
@@ -82,7 +81,12 @@ test_repo ()
     fi
     dist="dists/"
     distrib=$3
-    url="$url$dist$distrib"
+    if [ $(last_char "$distrib") != "/" ]
+    then
+	distrib="$distrib/"
+    fi
+    main=$4
+    url="$url$dist$distrib$main"
     if check_dep "curl"
     then
 	if !(curl -s --head "$url" | head -n 1 | grep "HTTP/1.[01] [23].." > /dev/null)
@@ -112,7 +116,8 @@ add_deb_rep ()
     done
     if test_repo $repo "$repo"
     then
-	echo "$repo" >> /etc/apt/sources.list
+	echo "${repo:1}" >> /etc/apt/sources.list
+	echo "Adding ${repo:1} to /etc/apt/sources.list"
     else
 	exit 1
     fi
