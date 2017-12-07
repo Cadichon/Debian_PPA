@@ -24,7 +24,7 @@ check_dep ()
 
     check=$(whereis -b $1)
 
-    if [[ !(-a $(cut -d ' ' -f 2 <<< $check)) ]]
+    if [[ ! (-a $(cut -d ' ' -f 2 <<< $check)) ]]
     then
        echo "You need \"$dep\" to use this tool"
        echo "Install it launching as root:"
@@ -36,7 +36,7 @@ check_dep ()
 
 update_funct ()
 {
-    if !(check_dep "diff" "diffutils")
+    if ! (check_dep "diff" "diffutils")
     then
 	exit 1
     fi
@@ -54,7 +54,7 @@ update_funct ()
 	exit 1
     fi
 
-    if !(diff "/usr/bin/$0" "/tmp/$tmp_file" > /dev/null)
+    if ! (diff "/usr/bin/$0" "/tmp/$tmp_file" > /dev/null)
     then
 	echo "Updating"
 	rm "/usr/bin/$0"
@@ -87,9 +87,9 @@ test_repo ()
     fi
     main=$4
     url="$url$dist$distrib$main"
-    if check_dep "curl"
+    if check_dep "curl" > /dev/null
     then
-	if !(curl -s --head "$url" | head -n 1 | grep "HTTP/1.[01] [23].." > /dev/null)
+	if ! (curl -s --head "$url" | head -n 1 | grep "HTTP/1.[01] [23].." > /dev/null)
 	then
 	    echo "WARNING $url is NOT a valid repository"
 	    return 1
@@ -156,13 +156,13 @@ add_ppa ()
     fi
 }
 
-if [ $(whoami) != 'root' ]
+if [ "$(whoami)" != 'root' ]
 then
     echo 'Launch me as root'
     exit 1
 fi
 
-if !(check_dep "dirmngr")
+if ! (check_dep "dirmngr")
 then
     exit 1
 fi
